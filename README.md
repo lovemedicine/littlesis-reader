@@ -1,6 +1,6 @@
 # littlesis-reader
 
-A prototype (in progress) for a Chrome extension that inserts links to LittleSis entities mentioned on web pages. If you are planning to use this heavily, notify [Matthew](https://github.com/skomputer) since the entity search uses a privately run Amazon CloudSearch instance for the time being.
+A prototype (in progress) for a Chrome extension that inserts links to [LittleSis](https://littlesis.org) entities mentioned on web pages. If you are planning to use this heavily, notify [Matthew](https://github.com/lovemedicine) since the entity search uses a privately run Amazon CloudSearch instance for the time being.
 
 ### Requirements
 
