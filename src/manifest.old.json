@@ -1,0 +1,33 @@
+{
+  "name": "__MSG_appName__",
+  "short_name": "__MSG_appShortName__",
+  "description": "__MSG_appDescription__",
+  "homepage_url": "http://chrome.google.com/webstore",
+  "version": "0.0.1",
+  "version_name": "0.0.1",
+  "manifest_version": 3,
+  "default_locale": "en",
+  "minimum_chrome_version": "88",
+  "permissions": [],
+  "icons": {
+    "16": "assets/img/icon@16.png",
+    "48": "assets/img/icon@48.png",
+    "96": "assets/img/icon@96.png",
+    "128": "assets/img/icon@128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "js": ["src/content.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "action": {
+    "default_icon": {
+      "16": "assets/img/icon@16.png"
+    },
+    "default_title": "__MSG_appName__"
+  }
+}

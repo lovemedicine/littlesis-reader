@@ -1,0 +1,11 @@
+{
+    "appName": {
+        "message": "littlesis-reader"
+    },
+    "appShortName": {
+        "message": "littlesis-reader"
+    },
+    "appDescription": {
+        "message": "Finds LittleSis entities mentioned on web pages"
+    }
+}
