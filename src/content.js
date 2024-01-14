@@ -7,9 +7,14 @@ async function main() {
   const content = getPageContent();
   const data = await extractEntitiesAndRelationships(content);
   const entitiesWithRelated = buildEntitiesWithRelated(data);
+  log(
+    `extracted entities: ${entitiesWithRelated
+      .map((entity) => entity.name)
+      .join(", ")}`
+  );
   const results = await matchLittleSisEntities(entitiesWithRelated);
   const matches = results
-    .filter((result) => result.hits.hit.length)
+    .filter((result) => result.hits?.hit?.length)
     .map((result) => {
       return { hit: result.hits.hit[0], entity: result.entity };
     });
