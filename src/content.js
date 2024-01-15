@@ -1,12 +1,27 @@
-import { getPageContent, extractEntitiesAndRelationships } from "./extract.js";
+import {
+  getPageContent,
+  extractEntitiesAndRelationships,
+  extractEntitiesWithBert,
+  extractRelationshipsFromEntities,
+} from "./extract.js";
 import { matchLittleSisEntities } from "./search.js";
+import { injectLittleSisLinkForMatch, injectLittleSisNav } from "./inject.js";
 import { log } from "./util.js";
-// import { laTimesEntities as entitiesWithRelated } from "./testData.js";
 
 async function main() {
   const content = getPageContent();
-  const data = await extractEntitiesAndRelationships(content);
-  const entitiesWithRelated = buildEntitiesWithRelated(data);
+  const entities = await extractEntitiesWithBert(content);
+  console.log(entities);
+  const { relationships } = await extractRelationshipsFromEntities(
+    content,
+    entities
+  );
+  console.log(relationships);
+  const entitiesWithRelated = buildEntitiesWithRelated({
+    entities,
+    relationships,
+  });
+  log(entitiesWithRelated);
   log(
     `extracted entities: ${entitiesWithRelated
       .map((entity) => entity.name)
@@ -22,6 +37,7 @@ async function main() {
   matches.forEach((match) => {
     injectLittleSisLinkForMatch(match);
   });
+  injectLittleSisNav(matches);
 }
 
 function buildEntitiesWithRelated({ entities, relationships }) {
@@ -41,27 +57,7 @@ function buildEntitiesWithRelated({ entities, relationships }) {
     entity2.related.push(entity1.name);
   }
 
-  return entities.filter((entity) => entity.related?.length);
-}
-
-function injectLittleSisLinkForMatch({ hit, entity }) {
-  const {
-    id,
-    fields: { name, type, blurb, aliases },
-  } = hit;
-  const url = `https://littlesis.org/${type.toLowerCase()}/${id}`;
-  const regexp = new RegExp(
-    `(>[^<]*)(${entity.name})([^>]*<)(.[^h][^1])`,
-    "gi"
-  );
-  log(regexp);
-  const newHtml = document.body.innerHTML.replace(
-    regexp,
-    (_, p1, p2, p3, p4) => {
-      return p1 + `<a href="${url}" target="_blank">` + p2 + "</a>" + p3 + p4;
-    }
-  );
-  document.body.innerHTML = newHtml;
+  return entities;
 }
 
 main();

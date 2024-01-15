@@ -1,60 +1,92 @@
-import OpenAI from "openai";
+import { Readability } from "@mozilla/readability";
 import { encodingForModel } from "js-tiktoken";
+import { chunkArray, log } from "./util.js";
 import {
-  debugMode,
-  openaiApiKey,
-  openaiModel,
-  openaiMaxTokens,
-} from "./config.js";
+  getHuggingfaceInference,
+  getOpenaiCompletion,
+  getOpenaiRelationshipsForEntities,
+} from "./api.js";
+import { debugMode, openaiModel, openaiMaxTokens } from "./config.js";
+
+export async function extractEntitiesWithBert(text) {
+  const words = text.split(/\s+/);
+  const chunks = chunkArray(words, 300);
+  const inputs = chunks.map((chunk) => chunk.join(" "));
+  const bertEntities = await getHuggingfaceInference({ inputs });
+  const entities = bertEntities
+    .flat()
+    .filter(bertEntityIsValid)
+    .map((entity, index) => ({
+      id: index + 1,
+      name: entity.word,
+      type: entity.entity_group === "PER" ? "person" : "org",
+    }));
+  return uniqueEntities(entities);
+}
+
+export async function extractRelationshipsFromEntities(text, entities) {
+  return await getOpenaiRelationshipsForEntities(text, entities);
+}
 
 export async function extractEntitiesAndRelationships(text) {
-  const openai = new OpenAI({
-    apiKey: openaiApiKey,
-    dangerouslyAllowBrowser: true,
-  });
   text = truncateText(text);
   const startTime = debugMode ? Date.now() : null;
-  const chatCompletion = await openai.chat.completions.create({
-    model: openaiModel,
-    response_format: { type: "json_object" },
-    messages: [
-      {
-        role: "system",
-        content: `You will be provided with text from a web page that might include names of people and organizations. Your task is to extract a list of people and organizations and any relationships between them. Only include organizations that typically have a board of directors. Return the list of people and organizations in a JSON array under the key 'entities'. Each entitiy should have the following fields: id, name, type. The id field should increment starting from 0. The type field's value should be either 'person' or 'organization'. Return the list of relationships in a JSON array under the key 'relationships'. Each relationship should have the following fields: entity1_id, entity2_id, and description. The entity1_id and entity2_id fields are the ids of the related people or organizations from the 'entities' array. The description field should be a very concise description of the relationship between the two entities. If no entities are mentioned in the text then set 'entities' equal to an empty array. If no relationships are mentioned in the text then set 'relationships' equal to an empty array.`,
-      },
-      { role: "user", content: text },
-    ],
-  });
-  const data = JSON.parse(chatCompletion.choices[0].message.content);
+  const data = await getOpenaiCompletion(text);
+
   if (debugMode) {
     const entityCount = data.entities.length;
     const wordCount = text.split(/\s+/g).length;
     const time = Math.floor((Date.now() - startTime) / 1000);
-    console.log(
+    log(
       `${openaiModel} extracted ${entityCount} entities from ${wordCount} words in ${time} seconds`
     );
   }
+
   return data;
 }
 
 function truncateText(text) {
   const encoding = encodingForModel(openaiModel);
   const tokens = encoding.encode(text);
-  const truncatedTokens = tokens.slice(0, openaiMaxTokens - 2000);
+  const truncatedTokens = tokens.slice(0, openaiMaxTokens - 500);
   const truncatedText = encoding.decode(truncatedTokens);
   return truncatedText;
 }
 
+export function getVisibleText() {
+  const html = document.cloneNode(true).querySelector("html").innerHTML;
+  const tags = document.body.getElementsByTagName("*");
+
+  [...tags].forEach((tag) => {
+    const style = window.getComputedStyle(tag);
+
+    if (
+      !style ||
+      style.visibility === "hidden" ||
+      style.display === "none" ||
+      style.opacity == 0 ||
+      parseInt(style.height.replace("px", "")) < 2 ||
+      parseInt(style.width.replace("px", "")) < 2
+    ) {
+      tag.remove();
+    }
+  });
+
+  const page = new Readability(document).parse();
+  document.querySelector("html").innerHTML = html;
+  return page.textContent;
+}
+
 export function getPageContent() {
-  const text = document.body.innerText;
-  const content = getTextContent(text);
-  console.log(
+  const text = getVisibleText();
+  const content = getMainContent(text);
+  log(
     `full page text is ${text.length} chars and begins with: ${text.slice(
       0,
       50
     )}`
   );
-  console.log(
+  log(
     `main content is ${content.length} chars and begins with: ${content.slice(
       0,
       50
@@ -63,8 +95,8 @@ export function getPageContent() {
   return content;
 }
 
-function getTextContent(text) {
-  const lines = text.split("\n").filter((line) => isContentLine(line));
+function getMainContent(text) {
+  const lines = text.split("\n").filter(isContentLine);
   return lines.join("\n");
 }
 
@@ -75,10 +107,7 @@ function isContentLine(str) {
     return false;
   }
 
-  if (
-    str.length > 300 ||
-    (isCapital(str[0]) && isSentenceEnd(str[str.length - 1]))
-  ) {
+  if (str.length > 200 || (isCapital(str[0]) && hasSentenceEnd(str))) {
     return true;
   }
 
@@ -89,6 +118,34 @@ function isCapital(char) {
   return char === char.toUpperCase();
 }
 
-function isSentenceEnd(char) {
-  return [".", "?", "!", "”"].includes(char);
+function hasSentenceEnd(str) {
+  return /[\.\?\!](”")?$/.test(str);
+}
+
+function bertEntityIsValid(entity) {
+  if (entity.score < 0.8 || !/^\w\w/.test(entity.word)) return false;
+
+  if (entity.entity_group === "PER") {
+    return entity.word.length > 4 && entity.word.split(/\s+/).length > 1;
+  }
+
+  if (entity.entity_group === "ORG") {
+    return (
+      entity.word.length > 3 ||
+      (entity.word.length > 1 && entity.word === entity.word.toUpperCase())
+    );
+  }
+
+  return false;
+}
+
+function uniqueEntities(entities) {
+  return Object.values(
+    entities.reduce((map, entity) => {
+      if (!map[entity.name]) {
+        map[entity.name] = entity;
+      }
+      return map;
+    }, {})
+  );
 }

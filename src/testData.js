@@ -1,4 +1,153 @@
 // only useful for testing on this page:
+// https://theintercept.com/2024/01/13/penn-palestine-writes-liz-magill/
+export const interceptExtractionData = {
+  entities: [
+    {
+      id: 0,
+      name: "Liz Magill",
+      type: "person",
+    },
+    {
+      id: 1,
+      name: "Stefanik",
+      type: "person",
+    },
+    {
+      id: 2,
+      name: "Scott Bok",
+      type: "person",
+    },
+    {
+      id: 3,
+      name: "Susan Abulhawa",
+      type: "person",
+    },
+    {
+      id: 4,
+      name: "Jewish Federation of Greater Philadelphia",
+      type: "organization",
+    },
+    {
+      id: 5,
+      name: "Anti-Defamation League of Philadelphia",
+      type: "organization",
+    },
+    {
+      id: 6,
+      name: "University of Pennsylvania",
+      type: "organization",
+    },
+    {
+      id: 7,
+      name: "Penn",
+      type: "organization",
+    },
+    {
+      id: 8,
+      name: "J. Larry Jameson",
+      type: "person",
+    },
+    {
+      id: 9,
+      name: "Bill Mullen",
+      type: "person",
+    },
+    {
+      id: 10,
+      name: "Julie Platt",
+      type: "person",
+    },
+    {
+      id: 11,
+      name: "Jewish Federations of North America",
+      type: "organization",
+    },
+    {
+      id: 12,
+      name: "Josh Shapiro",
+      type: "person",
+    },
+    {
+      id: 13,
+      name: "Art Council",
+      type: "organization",
+    },
+    {
+      id: 14,
+      name: "Marie Kelly",
+      type: "person",
+    },
+  ],
+  relationships: [
+    {
+      entity1_id: 0,
+      entity2_id: 2,
+      description: "resigned together",
+    },
+    {
+      entity1_id: 0,
+      entity2_id: 6,
+      description: "University of Pennsylvania",
+    },
+    {
+      entity1_id: 0,
+      entity2_id: 7,
+      description: "University of Pennsylvania",
+    },
+    {
+      entity1_id: 0,
+      entity2_id: 1,
+      description: "Stefanik’s line of questioning",
+    },
+    {
+      entity1_id: 0,
+      entity2_id: 9,
+      description: "board member of Palestine Writes",
+    },
+    {
+      entity1_id: 0,
+      entity2_id: 10,
+      description: "vice chair of the university board",
+    },
+    {
+      entity1_id: 4,
+      entity2_id: 0,
+      description: "sent letters to Magill",
+    },
+    {
+      entity1_id: 5,
+      entity2_id: 0,
+      description: "sent letters to Magill",
+    },
+    {
+      entity1_id: 6,
+      entity2_id: 3,
+      description: "citing concerns about certain speakers",
+    },
+    {
+      entity1_id: 6,
+      entity2_id: 13,
+      description: "represented in court proceedings",
+    },
+    {
+      entity1_id: 6,
+      entity2_id: 14,
+      description: "board member for Palestine Writes",
+    },
+    {
+      entity1_id: 11,
+      entity2_id: 10,
+      description: "Platt also serves as board chair",
+    },
+    {
+      entity1_id: 12,
+      entity2_id: 13,
+      description: "represented the arts council in court proceedings",
+    },
+  ],
+};
+
+// only useful for testing on this page:
 // https://www.latimes.com/politics/story/2024-01-07/kamala-harris-doug-emhoff-los-angeles-home-brentwood
 export const laTimesEntities = [
   {

@@ -8,13 +8,25 @@
   "manifest_version": 3,
   "default_locale": "en",
   "minimum_chrome_version": "88",
-  "permissions": [],
+  "action": {
+    "default_title": "Click to run in current tab"
+  },
+  "permissions": ["activeTab", "scripting"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "icons": {
     "16": "assets/img/icon@16.png",
     "48": "assets/img/icon@48.png",
     "96": "assets/img/icon@96.png",
     "128": "assets/img/icon@128.png"
   },
+  "web_accessible_resources": [
+    {
+      "matches": ["<all_urls>"],
+      "resources": ["assets/img/logo.png"]
+    }
+  ],
   "content_scripts": [
     {
       "js": ["content.js"],

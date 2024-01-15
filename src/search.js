@@ -1,13 +1,13 @@
-import { laTimesEntities as entitiesWithRelated } from "./testData.js";
+// import { laTimesEntities as entitiesWithRelated } from "./testData.js";
 import { maxEntitiesToMatch, maxRelatedEntities } from "./config.js";
 import { log } from "./util.js";
 
-async function main() {
-  const matches = await matchLittleSisEntities(entitiesWithRelated);
-  matches.forEach((match) => {
-    log(match.hits.hit);
-  });
-}
+// async function main() {
+//   const matches = await matchLittleSisEntities(entitiesWithRelated);
+//   matches.forEach((match) => {
+//     log(match.hits.hit);
+//   });
+// }
 
 export async function matchLittleSisEntities(entities) {
   const entitiesToMatch = entities
@@ -29,16 +29,12 @@ async function searchLittleSisEntities(entity) {
 
 function buildSearchQuery(entity) {
   const { name, type, related } = entity;
+  const nameQuery = `(or (near boost=5 field=name distance=1 '${name}') (phrase boost=3 field=aliases '${name}'))`;
   const typeQuery = `type:'${prepareType(type)}'`;
   const preparedRelated = related.map(prepareRelatedName);
-  const relatedQuery =
-    "(or " +
-    preparedRelated
-      .slice(0, maxRelatedEntities)
-      .map((name) => `related:'${name}'`)
-      .join(" ") +
-    ")";
-  return `(and (or name:'${name}' aliases:'${name}') ${typeQuery} ${relatedQuery})`;
+  const blurbQuery = buildRelatedQuery(preparedRelated, "blurb", 5);
+  const relatedQuery = buildRelatedQuery(preparedRelated, "related", 2);
+  return `(and ${nameQuery} ${typeQuery} ${blurbQuery} ${relatedQuery})`;
 }
 
 function prepareType(type) {
@@ -58,6 +54,21 @@ function prepareRelatedName(name) {
     .split(" ")
     .filter((part) => !omit[part])
     .join(" ");
+}
+
+function buildRelatedQuery(relatedNames, field, boost) {
+  return (
+    "(or " +
+    relatedNames
+      .slice(0, maxRelatedEntities)
+      .map(
+        (name) => `(near boost=${boost} field=${field} distance=1 '${name}')`
+      )
+      .join(" ") +
+    // so that the search will succeed, but without a boost, even if there's no match on related
+    `(not boost=0.001 field=${field} 'match_without_boost')` +
+    ")"
+  );
 }
 
 // main();
