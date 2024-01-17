@@ -1,6 +1,5 @@
 import {
   getPageContent,
-  extractEntitiesAndRelationships,
   extractEntitiesWithBert,
   extractRelationshipsFromEntities,
 } from "./extract.js";
@@ -9,14 +8,23 @@ import { injectLittleSisLinkForMatch, injectLittleSisNav } from "./inject.js";
 import { log } from "./util.js";
 
 async function main() {
+  console.time("entity names");
   const content = getPageContent();
+  log(content);
   const entities = await extractEntitiesWithBert(content);
+  console.timeEnd("entity names");
   console.log(entities);
+  // const entitiesWithNearbyRelated = buildEntitiesWithRelatedUsingContent(
+  //   entities,
+  //   content
+  // );
+  // console.log(entitiesWithNearbyRelated);
+  return;
+  log(entities.map((entity) => entity.name));
   const { relationships } = await extractRelationshipsFromEntities(
     content,
     entities
   );
-  console.log(relationships);
   const entitiesWithRelated = buildEntitiesWithRelated({
     entities,
     relationships,
@@ -59,5 +67,21 @@ function buildEntitiesWithRelated({ entities, relationships }) {
 
   return entities;
 }
+
+// function buildEntitiesWithRelatedUsingContent(entities, content) {
+//   const lineBreakIndexes = [
+//     ...content.matchAll(new RegExp("\n", "gi")),
+//   ].map((a) => a.index);
+
+//   const singleLineEntityGroups = {}
+
+//   for (let i = 0; i < entities.length; i++) {
+//     const index = content.indexOf(entity.name);
+
+//     for (let j = 0; j < lineBreakIndexes.length; j++) {
+//       if (index > lineBreakIndexes)
+//     }
+//   }
+// }
 
 main();

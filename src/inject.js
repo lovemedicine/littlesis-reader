@@ -18,7 +18,7 @@ export function injectLittleSisLinkForMatch({ hit, entity }) {
         p1 +
         p2 +
         `<a data-littlesis-id="${id}" href="${url}" target="_blank" title="${blurb}" aria-label="${blurb}">` +
-        `<img style="display: inline-block;" src="${chrome.runtime.getURL(
+        `<img style="display: inline-block; height: 16px; width: 16px;" src="${chrome.runtime.getURL(
           "assets/img/logo.png"
         )}" />` +
         "</a>" +
@@ -36,6 +36,7 @@ function buildLittleSisUrl(type, id) {
 
 export function injectLittleSisNav(matches) {
   const nav = document.createElement("div");
+  nav.id = "littlesis-reader-nav";
   nav.style.backgroundColor = "#ffffff";
   nav.style.padding = "10px";
   nav.style.width = 300;
@@ -43,6 +44,7 @@ export function injectLittleSisNav(matches) {
   nav.style.right = 0;
   nav.style.position = "fixed";
   nav.style.zIndex = 9999;
+  nav.style.display = "none";
 
   matches.forEach(({ hit }) => {
     const {
@@ -60,6 +62,28 @@ export function injectLittleSisNav(matches) {
     div.appendChild(a);
     nav.appendChild(div);
   });
-
   document.body.appendChild(nav);
+
+  const navButton = document.createElement("div");
+  nav.style.backgroundColor = "#ffffff";
+  nav.style.padding = "5px";
+  nav.style.top = 0;
+  nav.style.right = 0;
+  nav.style.position = "fixed";
+  nav.style.zIndex = 10000;
+  nav.style.display = "none";
+
+  const img = document.createElement("img");
+  img.src = chrome.runtime.getURL("assets/img/logo.png");
+  img.style.cursor = "pointer";
+  img.addEventListener("click", () => {
+    const nav = document.getElementById("littlesis-reader-nav");
+    if (nav.style.display === "none") {
+      nav.style.display = "block";
+    } else {
+      nav.style.display = "none";
+    }
+  });
+  navButton.appendChild(img);
+  document.body.appendChild(navButton);
 }

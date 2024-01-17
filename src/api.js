@@ -2,28 +2,67 @@ import OpenAI from "openai";
 import {
   openaiApiKey,
   openaiModel,
-  huggingfaceModel,
   huggingfaceApiKey,
+  awsAccessKey,
+  awsSecretAccessKey,
 } from "./config.js";
+import {
+  BedrockRuntimeClient,
+  InvokeModelCommand,
+} from "@aws-sdk/client-bedrock-runtime";
 
-export async function getHuggingfaceInference(data) {
+export async function getAnthropicCompletion(model, text) {
+  const client = new BedrockRuntimeClient({
+    region: "us-east-1",
+    credentials: {
+      accessKeyId: awsAccessKey,
+      secretAccessKey: awsSecretAccessKey,
+    },
+  });
+  const request = {
+    prompt: `\n\nHuman:${text}\n\nAssistant:`,
+    max_tokens_to_sample: 1000,
+    temperature: 0,
+  };
+  const input = {
+    body: JSON.stringify(request),
+    contentType: "application/json",
+    accept: "application/json",
+    modelId: model,
+  };
+
+  try {
+    const command = new InvokeModelCommand(input);
+    const response = await client.send(command);
+    const completion = JSON.parse(Buffer.from(response.body).toString("utf-8"));
+    return completion;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function getHuggingfaceInference(model, { inputs }) {
   const response = await fetch(
-    `https://api-inference.huggingface.co/models/${huggingfaceModel}`,
+    `https://api-inference.huggingface.co/models/${model}`,
     {
       headers: {
         Authorization: `Bearer ${huggingfaceApiKey}`,
       },
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ inputs }),
     }
   );
   return await response.json();
 }
 
-export async function getOpenaiRelationshipsForEntities(text, entities) {
-  const instructions = `You will be provided with text from a web page that might include info about the following entities: ${JSON.stringify(
-    entities
-  )}. Your task is to extract a list of relationships mentioned in the text between any of these entities. Return the list of relationships in a JSON array under the key 'relationships'. Each relationship should have the following fields: entity1_id and entity2_id. The entity1_id and entity2_id fields are the ids of the related people or organizations from the provided entities array. If no relationships between the provided entities are mentioned in the text, then set 'relationships' equal to an empty array.`;
+export async function getOpenaiRelationshipsForEntities(text, entityNames) {
+  const format = `["<First Entity Name>","<Second Entity Name>","<relationship type>"]`;
+  const formatInstructions = useJson()
+    ? `Return the relationships as a JSON array under the key 'relationships'. Each relationship in the JSON should be an array with this format: ${format}.`
+    : `Each relationship should have this format:\n\n${format}`;
+  const instructions = `You will be provided with text from a web page that mentions the following entities: ${entityNames.join(
+    ", "
+  )}. Your task is to find all membership, eployment, familial, and financial relationships that are clearly and specifically mentioned in the text, between any two of these entities. Do not include more than one relationship between any two entities. ${formatInstructions}`;
   return await getOpenaiCompletion(instructions, text);
 }
 
@@ -40,12 +79,32 @@ async function getOpenaiCompletion(instructions, text) {
 
   const chatCompletion = await openai.chat.completions.create({
     model: openaiModel,
-    response_format: { type: "json_object" },
+    response_format: useJson() ? { type: "json_object" } : undefined,
+    temperature: 0.2,
     messages: [
       { role: "system", content: instructions },
       { role: "user", content: text },
     ],
   });
 
-  return JSON.parse(chatCompletion.choices[0].message.content);
+  if (chatCompletion.choices.finish_reason == "length") {
+    console.log(
+      "completion finished early due to length:",
+      chatCompletion.choices[0].message.content
+    );
+    return chatCompletion.choices[0].message.content;
+  }
+
+  try {
+    const content = chatCompletion.choices[0].message.content;
+    return useJson() ? JSON.parse(content) : content;
+  } catch (error) {
+    console.log(error);
+    console.log(chatCompletion);
+    return chatCompletion;
+  }
+}
+
+function useJson() {
+  return ["gpt-3.5-turbo-1106", "gpt-4-1106-preview"].includes(openaiModel);
 }

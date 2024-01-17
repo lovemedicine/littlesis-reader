@@ -3,35 +3,48 @@ import { encodingForModel } from "js-tiktoken";
 import { chunkArray, log } from "./util.js";
 import {
   getHuggingfaceInference,
-  getOpenaiCompletion,
+  getOpenaiEntitiesAndRelationships,
   getOpenaiRelationshipsForEntities,
 } from "./api.js";
-import { debugMode, openaiModel, openaiMaxTokens } from "./config.js";
+import {
+  debugMode,
+  openaiModel,
+  openaiMaxTokens,
+  huggingfaceEntityModel,
+  huggingfaceRelationModel,
+} from "./config.js";
 
 export async function extractEntitiesWithBert(text) {
   const words = text.split(/\s+/);
   const chunks = chunkArray(words, 300);
   const inputs = chunks.map((chunk) => chunk.join(" "));
-  const bertEntities = await getHuggingfaceInference({ inputs });
-  const entities = bertEntities
-    .flat()
-    .filter(bertEntityIsValid)
-    .map((entity, index) => ({
-      id: index + 1,
-      name: entity.word,
-      type: entity.entity_group === "PER" ? "person" : "org",
-    }));
-  return uniqueEntities(entities);
+  // const inputs = text
+  //   .split("\n")
+  //   .map((line) => {
+  //     // chunk each line at 300 words, BERT max tokens is 512 per input
+  //     const chunks = chunkArray(line.split(/\s+/), 300);
+  //     return chunks.map((chunk) => chunk.join(" "));
+  //   })
+  //   .flat();
+  const bertEntities = await getHuggingfaceInference(huggingfaceEntityModel, {
+    inputs,
+  });
+
+  return prepareBertEntities(bertEntities);
 }
 
 export async function extractRelationshipsFromEntities(text, entities) {
-  return await getOpenaiRelationshipsForEntities(text, entities);
+  text = truncateOpenaiText(text);
+  return await getOpenaiRelationshipsForEntities(
+    text,
+    entities.map((entity) => entity.name)
+  );
 }
 
 export async function extractEntitiesAndRelationships(text) {
-  text = truncateText(text);
+  text = truncateOpenaiText(text);
   const startTime = debugMode ? Date.now() : null;
-  const data = await getOpenaiCompletion(text);
+  const data = await getOpenaiEntitiesAndRelationships(text);
 
   if (debugMode) {
     const entityCount = data.entities.length;
@@ -45,7 +58,11 @@ export async function extractEntitiesAndRelationships(text) {
   return data;
 }
 
-function truncateText(text) {
+export async function extractRelationships({ inputs }) {
+  return await getHuggingfaceInference(huggingfaceRelationModel, { inputs });
+}
+
+function truncateOpenaiText(text) {
   const encoding = encodingForModel(openaiModel);
   const tokens = encoding.encode(text);
   const truncatedTokens = tokens.slice(0, openaiMaxTokens - 500);
@@ -54,7 +71,7 @@ function truncateText(text) {
 }
 
 export function getVisibleText() {
-  const html = document.cloneNode(true).querySelector("html").innerHTML;
+  const docElem = document.documentElement.cloneNode(true);
   const tags = document.body.getElementsByTagName("*");
 
   [...tags].forEach((tag) => {
@@ -65,15 +82,15 @@ export function getVisibleText() {
       style.visibility === "hidden" ||
       style.display === "none" ||
       style.opacity == 0 ||
-      parseInt(style.height.replace("px", "")) < 2 ||
-      parseInt(style.width.replace("px", "")) < 2
+      (parseInt(style.height.replace("px", "")) < 2 &&
+        parseInt(style.width.replace("px", "")) < 2)
     ) {
       tag.remove();
     }
   });
 
   const page = new Readability(document).parse();
-  document.querySelector("html").innerHTML = html;
+  document.documentElement.replaceWith(docElem);
   return page.textContent;
 }
 
@@ -122,30 +139,76 @@ function hasSentenceEnd(str) {
   return /[\.\?\!](”")?$/.test(str);
 }
 
-function bertEntityIsValid(entity) {
-  if (entity.score < 0.8 || !/^\w\w/.test(entity.word)) return false;
+function prepareBertEntities(entityGroups) {
+  const nameIndex = {};
 
-  if (entity.entity_group === "PER") {
-    return entity.word.length > 4 && entity.word.split(/\s+/).length > 1;
+  function isRelevant(entity) {
+    if (entity.score < 0.8 || !/^\w\w/.test(entity.word)) return false;
+
+    if (entity.entity_group === "PER") {
+      return entity.word.length > 4 && entity.word.split(/\s+/).length > 1;
+    }
+
+    if (entity.entity_group === "ORG") {
+      return (
+        entity.word.length > 4 ||
+        (entity.word.length > 1 && entity.word === entity.word.toUpperCase())
+      );
+    }
+
+    return false;
   }
 
-  if (entity.entity_group === "ORG") {
-    return (
-      entity.word.length > 3 ||
-      (entity.word.length > 1 && entity.word === entity.word.toUpperCase())
-    );
+  function isNotDuplicate(entity) {
+    if (nameIndex[entity.name]) {
+      return false;
+    } else {
+      nameIndex[entity.name] = true;
+      return true;
+    }
   }
 
-  return false;
+  function cleanupName(entity) {
+    // BERT sometimes surrounds hyphens with spaces
+    entity.name = entity.word.replace(" - ", "-");
+    return entity;
+  }
+
+  return entityGroups.map((entities) => {
+    entities = entities.filter(isRelevant).map(cleanupName);
+    // .filter(isNotDuplicate);
+    const entityNames = entities.map((entity) => entity.name);
+    return entities.map((entity, index) => ({
+      id: index,
+      name: entity.name,
+      type: entity.entity_group === "PER" ? "person" : "org",
+      related: entityNames.filter((name) => name !== entity.name),
+    }));
+  });
 }
 
-function uniqueEntities(entities) {
-  return Object.values(
-    entities.reduce((map, entity) => {
-      if (!map[entity.name]) {
-        map[entity.name] = entity;
+function removeDuplicateEntities(entityGroups) {
+  // return Object.values(
+  //   entities.reduce((map, entity) => {
+  //     if (!map[entity.name]) {
+  //       map[entity.name] = entity;
+  //     }
+  //     return map;
+  //   }, {})
+  // );
+
+  const nameIndex = {};
+
+  return entityGroups.map((group) => {
+    const newGroup = [];
+
+    group.forEach((entity) => {
+      if (!nameIndex[entity.name]) {
+        newGroup.push(entity);
+        nameIndex[entity.name] = true;
       }
-      return map;
-    }, {})
-  );
+    });
+
+    return newGroup;
+  });
 }
