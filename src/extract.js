@@ -14,6 +14,11 @@ import {
   huggingfaceRelationModel,
 } from "./config.js";
 
+export async function extractEntitiesWithGcp(text) {
+  const gcpEntities = getGcpNamedEntities(text);
+  return prepareGcpEntities(gcpEntities);
+}
+
 export async function extractEntitiesWithBert(text) {
   const words = text.split(/\s+/);
   const chunks = chunkArray(words, 300);
@@ -137,6 +142,80 @@ function isCapital(char) {
 
 function hasSentenceEnd(str) {
   return /[\.\?\!](”")?$/.test(str);
+}
+
+function prepareGcpEntities(entities) {
+  const filteredEntities = filterGcpEntities(entities);
+  const entitiesWithRelated = addRelatedToGcpEntities(filteredEntities);
+  return cleanupGcpEntities(entitiesWithRelated);
+}
+
+function filterGcpEntities(entities) {
+  return entities.filter((entity) => {
+    return (
+      (["PERSON", "ORGANIZATION"].includes(entity.type) ||
+        (entity.type === "LOCATION" && /university|college|school/i).test(
+          entity.name
+        )) &&
+      (entity.metadata.mid || entity.metadata.wikipedia_url)
+    );
+  });
+}
+
+function addRelatedToGcpEntities(entities) {
+  const offsetMap = entities.reduce((map, entity) => {
+    entity.mentions
+      .map((mention) => mention.beginOffset)
+      .forEach((offset) => {
+        map[offset] = entity;
+      });
+    return map;
+  }, {});
+
+  const lastOffset = Math.max(...Object.keys(offsetMap));
+  const groupRange = 100;
+  let group = {};
+
+  for (let i = 0; i < lastOffset; i++) {
+    let mid = i + Math.floor(groupRange / 2);
+    let end = i + groupRange;
+
+    // if there's an entity at the end of offset range, add it to the group
+    if (offsetMap[end]) {
+      group[i + groupRange] = true;
+    }
+
+    // when an entity is at the midpoint of the range, add all the names of entities
+    // in the range to the entity's related set
+    if (group[mid]) {
+      Object.keys(group)
+        .filter((offset) => offset !== mid)
+        .forEach((offset) => {
+          offsetMap[mid].related = (offsetMap[mid].related || new Set()).add(
+            offsetMap[offset].name
+          );
+        });
+    }
+
+    // remove from group any entity at start of offset range
+    delete group[i];
+  }
+
+  // convert set of related names to array
+  return Object.values(offsetMap).map((entity) => {
+    entity.related = [...entityRelated];
+    return entity;
+  });
+}
+
+function cleanupGcpEntities(entities) {
+  return entities.map((entity) => {
+    return {
+      name: entity.name,
+      type: entity.type === "PERSON" ? "person" : "org",
+      related: entity.related,
+    };
+  });
 }
 
 function prepareBertEntities(entityGroups) {

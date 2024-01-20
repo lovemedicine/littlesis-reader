@@ -2,3 +2,4 @@ dist
 node_modules
 src/config.js
 src/test.js
+src/keys

@@ -1,6 +1,6 @@
 import {
   getPageContent,
-  extractEntitiesWithBert,
+  extractEntitiesWithGcp,
   extractRelationshipsFromEntities,
 } from "./extract.js";
 import { matchLittleSisEntities } from "./search.js";
@@ -11,7 +11,7 @@ async function main() {
   console.time("entity names");
   const content = getPageContent();
   log(content);
-  const entities = await extractEntitiesWithBert(content);
+  const entities = await extractEntitiesWithGcp(content);
   console.timeEnd("entity names");
   console.log(entities);
   // const entitiesWithNearbyRelated = buildEntitiesWithRelatedUsingContent(
