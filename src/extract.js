@@ -2,6 +2,7 @@ import { Readability } from "@mozilla/readability";
 import { encodingForModel } from "js-tiktoken";
 import { chunkArray, log } from "./util.js";
 import {
+  getGcpNamedEntities,
   getHuggingfaceInference,
   getOpenaiEntitiesAndRelationships,
   getOpenaiRelationshipsForEntities,
@@ -15,7 +16,7 @@ import {
 } from "./config.js";
 
 export async function extractEntitiesWithGcp(text) {
-  const gcpEntities = getGcpNamedEntities(text);
+  const gcpEntities = await getGcpNamedEntities(text);
   return prepareGcpEntities(gcpEntities);
 }
 
@@ -154,26 +155,30 @@ function filterGcpEntities(entities) {
   return entities.filter((entity) => {
     return (
       (["PERSON", "ORGANIZATION"].includes(entity.type) ||
-        (entity.type === "LOCATION" && /university|college|school/i).test(
-          entity.name
-        )) &&
+        (entity.type === "LOCATION" &&
+          /university|college|school/i.test(entity.name))) &&
       (entity.metadata.mid || entity.metadata.wikipedia_url)
     );
   });
 }
 
 function addRelatedToGcpEntities(entities) {
+  const nameMap = entities.reduce((map, entity) => {
+    map[entity.name] = entity;
+    return map;
+  }, {});
+
   const offsetMap = entities.reduce((map, entity) => {
     entity.mentions
-      .map((mention) => mention.beginOffset)
+      .map((mention) => mention.text.beginOffset)
       .forEach((offset) => {
-        map[offset] = entity;
+        map[offset] = entity.name;
       });
     return map;
   }, {});
 
   const lastOffset = Math.max(...Object.keys(offsetMap));
-  const groupRange = 100;
+  const groupRange = 300;
   let group = {};
 
   for (let i = 0; i < lastOffset; i++) {
@@ -182,19 +187,21 @@ function addRelatedToGcpEntities(entities) {
 
     // if there's an entity at the end of offset range, add it to the group
     if (offsetMap[end]) {
-      group[i + groupRange] = true;
+      group[end] = true;
     }
 
     // when an entity is at the midpoint of the range, add all the names of entities
     // in the range to the entity's related set
     if (group[mid]) {
-      Object.keys(group)
-        .filter((offset) => offset !== mid)
-        .forEach((offset) => {
-          offsetMap[mid].related = (offsetMap[mid].related || new Set()).add(
-            offsetMap[offset].name
-          );
-        });
+      const entity = nameMap[offsetMap[mid]];
+      Object.keys(group).forEach((offset) => {
+        // skip entity's own name
+        if (offsetMap[offset] === entity.name) {
+          return;
+        }
+
+        entity.related = (entity.related || new Set()).add(offsetMap[offset]);
+      });
     }
 
     // remove from group any entity at start of offset range
@@ -202,8 +209,8 @@ function addRelatedToGcpEntities(entities) {
   }
 
   // convert set of related names to array
-  return Object.values(offsetMap).map((entity) => {
-    entity.related = [...entityRelated];
+  return Object.values(nameMap).map((entity) => {
+    entity.related = [...(entity.related || [])];
     return entity;
   });
 }

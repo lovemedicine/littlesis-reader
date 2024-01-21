@@ -5,27 +5,23 @@ import {
   huggingfaceApiKey,
   awsAccessKey,
   awsSecretAccessKey,
+  apiDomain,
 } from "./config.js";
 import {
   BedrockRuntimeClient,
   InvokeModelCommand,
 } from "@aws-sdk/client-bedrock-runtime";
-import language from "@google-cloud/language";
 
 export async function getGcpNamedEntities(text) {
-  const client = new language.LanguageServiceClient({
-    projectId: "littlesis-reader",
-    keyFilename: "./littlesis-reader-6e6a3906ee4a.json",
+  const response = await fetch(`${apiDomain}/api/getGcpNamedEntities`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ text }),
   });
-  const document = {
-    content: text,
-    type: "PLAIN_TEXT",
-  };
-  const [result] = await client.analyzeEntities({
-    document,
-    encodingType: "UTF8",
-  });
-  return result.entities;
+  const data = await response.json();
+  return data.entities;
 }
 
 export async function getAnthropicCompletion(model, text) {
