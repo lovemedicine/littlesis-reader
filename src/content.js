@@ -1,51 +1,29 @@
-import {
-  getPageContent,
-  extractEntitiesWithGcp,
-  extractRelationshipsFromEntities,
-} from "./extract.js";
+import { getPageContent, extractEntitiesWithGcp } from "./extract.js";
 import { matchLittleSisEntities } from "./search.js";
 import { injectLittleSisLinkForMatch, injectLittleSisNav } from "./inject.js";
 import { log } from "./util.js";
 
 async function main() {
-  console.time("entity names");
   const content = getPageContent();
-  log(content);
   const entities = await extractEntitiesWithGcp(content);
-  console.timeEnd("entity names");
-  console.log(entities);
-  // const entitiesWithNearbyRelated = buildEntitiesWithRelatedUsingContent(
-  //   entities,
-  //   content
-  // );
-  // console.log(entitiesWithNearbyRelated);
-  return;
-  log(entities.map((entity) => entity.name));
-  const { relationships } = await extractRelationshipsFromEntities(
-    content,
-    entities
-  );
-  const entitiesWithRelated = buildEntitiesWithRelated({
-    entities,
-    relationships,
+  log("extracted entities", entities);
+  const matchedEntities = await matchLittleSisEntities(entities);
+  log("matched entities", matchedEntities);
+  matchedEntities.forEach((entity) => {
+    injectLittleSisLinkForMatch(entity);
   });
-  log(entitiesWithRelated);
-  log(
-    `extracted entities: ${entitiesWithRelated
-      .map((entity) => entity.name)
-      .join(", ")}`
-  );
-  const results = await matchLittleSisEntities(entitiesWithRelated);
-  const matches = results
-    .filter((result) => result.hits?.hit?.length)
-    .map((result) => {
-      return { hit: result.hits.hit[0], entity: result.entity };
-    });
-  log(matches);
-  matches.forEach((match) => {
-    injectLittleSisLinkForMatch(match);
+  injectLittleSisNav(matchedEntities);
+}
+
+function cleanupEntities(entities) {
+  return entities.map((entity) => {
+    return {
+      id: entity.id,
+      name: entity.name,
+      type: entity.type === "PERSON" ? "person" : "org",
+      blurb: entity.blurb,
+    };
   });
-  injectLittleSisNav(matches);
 }
 
 function buildEntitiesWithRelated({ entities, relationships }) {
@@ -67,21 +45,5 @@ function buildEntitiesWithRelated({ entities, relationships }) {
 
   return entities;
 }
-
-// function buildEntitiesWithRelatedUsingContent(entities, content) {
-//   const lineBreakIndexes = [
-//     ...content.matchAll(new RegExp("\n", "gi")),
-//   ].map((a) => a.index);
-
-//   const singleLineEntityGroups = {}
-
-//   for (let i = 0; i < entities.length; i++) {
-//     const index = content.indexOf(entity.name);
-
-//     for (let j = 0; j < lineBreakIndexes.length; j++) {
-//       if (index > lineBreakIndexes)
-//     }
-//   }
-// }
 
 main();

@@ -5,23 +5,24 @@ import {
   huggingfaceApiKey,
   awsAccessKey,
   awsSecretAccessKey,
+  awsCloudSearchApiKey,
   apiDomain,
+  apiKey,
 } from "./config.js";
 import {
   BedrockRuntimeClient,
   InvokeModelCommand,
 } from "@aws-sdk/client-bedrock-runtime";
 
-export async function getGcpNamedEntities(text) {
-  const response = await fetch(`${apiDomain}/api/getGcpNamedEntities`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ text }),
+export async function getLittlesisIdsFromGcpMetadata(key, values) {
+  return await callBackendFunction("getLittlesisIdsFromGcpMetadata", {
+    key,
+    values,
   });
-  const data = await response.json();
-  return data.entities;
+}
+
+export async function getGcpNamedEntities(text) {
+  return await callBackendFunction("getGcpNamedEntities", { text });
 }
 
 export async function getAnthropicCompletion(model, text) {
@@ -92,7 +93,7 @@ async function getOpenaiCompletion(instructions, text) {
 
   const chatCompletion = await openai.chat.completions.create({
     model: openaiModel,
-    response_format: useJson() ? { type: "json_object" } : undefined,
+    response_format: useOpenaiJson() ? { type: "json_object" } : undefined,
     temperature: 0.2,
     messages: [
       { role: "system", content: instructions },
@@ -110,7 +111,7 @@ async function getOpenaiCompletion(instructions, text) {
 
   try {
     const content = chatCompletion.choices[0].message.content;
-    return useJson() ? JSON.parse(content) : content;
+    return useOpenaiJson() ? JSON.parse(content) : content;
   } catch (error) {
     console.log(error);
     console.log(chatCompletion);
@@ -118,6 +119,28 @@ async function getOpenaiCompletion(instructions, text) {
   }
 }
 
-function useJson() {
+function useOpenaiJson() {
   return ["gpt-3.5-turbo-1106", "gpt-4-1106-preview"].includes(openaiModel);
+}
+
+export async function findLittlesisEntities(query) {
+  const endpoint =
+    "https://2c76ayi2ic.execute-api.us-east-1.amazonaws.com/search";
+  const url = `${endpoint}?q=${encodeURIComponent(query)}&q.parser=structured`;
+  const headers = { "X-Api-Key": awsCloudSearchApiKey };
+  const response = await fetch(url, { headers });
+  return await response.json();
+}
+
+async function callBackendFunction(functionName, requestData) {
+  const response = await fetch(`${apiDomain}/api/${functionName}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Api-Key": apiKey,
+    },
+    body: JSON.stringify(requestData),
+  });
+  const { data } = await response.json();
+  return data;
 }

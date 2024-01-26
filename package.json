@@ -32,7 +32,8 @@
     "@google-cloud/language": "^6.1.1",
     "@mozilla/readability": "^0.5.0",
     "js-tiktoken": "^1.0.8",
-    "openai": "^4.24.1"
+    "openai": "^4.24.1",
+    "wikibase-sdk": "^9.2.4"
   },
   "devDependencies": {
     "extension-cli": "latest"

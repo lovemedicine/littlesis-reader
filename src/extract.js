@@ -4,6 +4,7 @@ import { chunkArray, log } from "./util.js";
 import {
   getGcpNamedEntities,
   getHuggingfaceInference,
+  getLittlesisIdsFromGcpMetadata,
   getOpenaiEntitiesAndRelationships,
   getOpenaiRelationshipsForEntities,
 } from "./api.js";
@@ -147,8 +148,7 @@ function hasSentenceEnd(str) {
 
 function prepareGcpEntities(entities) {
   const filteredEntities = filterGcpEntities(entities);
-  const entitiesWithRelated = addRelatedToGcpEntities(filteredEntities);
-  return cleanupGcpEntities(entitiesWithRelated);
+  return addRelatedToGcpEntities(filteredEntities);
 }
 
 function filterGcpEntities(entities) {
@@ -212,16 +212,6 @@ function addRelatedToGcpEntities(entities) {
   return Object.values(nameMap).map((entity) => {
     entity.related = [...(entity.related || [])];
     return entity;
-  });
-}
-
-function cleanupGcpEntities(entities) {
-  return entities.map((entity) => {
-    return {
-      name: entity.name,
-      type: entity.type === "PERSON" ? "person" : "org",
-      related: entity.related,
-    };
   });
 }
 
