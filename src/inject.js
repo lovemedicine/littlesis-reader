@@ -1,7 +1,14 @@
 import { log } from "./util.js";
 
-export function injectLittleSisLinkForMatch({ id, name, type, blurb }) {
-  const url = buildLittleSisUrl(type, id);
+export function injectEntities(entities) {
+  entities.forEach((entity) => {
+    injectLittlesisLinkForMatch(entity);
+  });
+  injectLittlesisNav(entities);
+}
+
+function injectLittlesisLinkForMatch({ id, name, type, blurb }) {
+  const url = buildLittlesisUrl(type, id);
   const regexp = new RegExp(`(>[^<]*)(${name})([^>]*<)(.[^h][^1])`, "gi");
   log(regexp);
   const newHtml = document.body.innerHTML.replace(
@@ -23,11 +30,11 @@ export function injectLittleSisLinkForMatch({ id, name, type, blurb }) {
   document.body.innerHTML = newHtml;
 }
 
-function buildLittleSisUrl(type, id) {
+function buildLittlesisUrl(type, id) {
   return `https://littlesis.org/${type.toLowerCase()}/${id}`;
 }
 
-export function injectLittleSisNav(entities) {
+function injectLittlesisNav(entities) {
   const nav = document.createElement("div");
   nav.id = "littlesis-reader-nav";
   nav.style.backgroundColor = "#ffffff";

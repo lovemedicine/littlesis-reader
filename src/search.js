@@ -1,13 +1,12 @@
 import { maxRelatedEntities } from "./config.js";
-import {
-  findLittlesisEntities,
-  getLittlesisIdsFromGcpMetadata,
-} from "./api.js";
+import { findLittlesisEntities, callBackendFunction } from "./api.js";
 
-export async function matchLittleSisEntities(entities) {
+// accepts entities in the form of { name, type, related, metadata }
+// returns entities in the form of { id, name, type, blurb }
+export async function matchEntities(entities) {
   entities = await matchEntitiesWithMetadata(entities);
   entities = await matchEntitiesWithRelated(entities);
-  return convertSearchResultsToEntities(entities);
+  return convertSearchResultsToDisplayEntities(entities);
 }
 
 async function matchEntitiesWithMetadata(entities) {
@@ -51,11 +50,18 @@ async function matchEntitiesWithMetadata(entities) {
   });
 }
 
-async function matchEntitiesWithRelated(entities) {
-  return await Promise.all(entities.map(searchLittleSisEntities));
+async function getLittlesisIdsFromGcpMetadata(key, values) {
+  return await callBackendFunction("getLittlesisIdsFromGcpMetadata", {
+    key,
+    values,
+  });
 }
 
-async function searchLittleSisEntities(entity) {
+async function matchEntitiesWithRelated(entities) {
+  return await Promise.all(entities.map(searchLittlesisEntities));
+}
+
+async function searchLittlesisEntities(entity) {
   const query = buildSearchQuery(entity);
   const data = await findLittlesisEntities(query);
   return { ...data, entity };
@@ -76,7 +82,7 @@ function buildSearchQuery(entity) {
 }
 
 function prepareType(type) {
-  return type.charAt(0).toUpperCase() + type.slice(1);
+  return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
 }
 
 function prepareRelatedName(name) {
@@ -110,7 +116,7 @@ function buildRelatedQuery(relatedNames, field, boost) {
   );
 }
 
-function convertSearchResultsToEntities(searchResults) {
+function convertSearchResultsToDisplayEntities(searchResults) {
   return searchResults
     .filter((result) => result.hits?.hit?.length)
     .map((result) => {

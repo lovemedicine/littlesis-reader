@@ -15,7 +15,7 @@
     "build:firefox": "xt-build -e prod -p firefox",
     "clean": "xt-clean",
     "docs": "xt-docs",
-    "test": "xt-test",
+    "test": "NODE_ENV=test xt-test",
     "coverage": "nyc --reporter=lcov npm run test",
     "sync": "xt-sync"
   },
@@ -32,6 +32,7 @@
     "@google-cloud/language": "^6.1.1",
     "@mozilla/readability": "^0.5.0",
     "js-tiktoken": "^1.0.8",
+    "jsdom": "^24.0.0",
     "openai": "^4.24.1",
     "wikibase-sdk": "^9.2.4"
   },
