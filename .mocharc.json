@@ -1,0 +1,5 @@
+{
+  "spec": "test/**/*.test.js",
+  "require": ["chai/register-expect.js"],
+  "recursive": true
+}

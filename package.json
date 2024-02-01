@@ -15,7 +15,7 @@
     "build:firefox": "xt-build -e prod -p firefox",
     "clean": "xt-clean",
     "docs": "xt-docs",
-    "test": "NODE_ENV=test xt-test test/*.test.js",
+    "test": "NODE_ENV=test xt-test",
     "coverage": "nyc --reporter=lcov npm run test",
     "sync": "xt-sync"
   },
@@ -37,7 +37,9 @@
     "wikibase-sdk": "^9.2.4"
   },
   "devDependencies": {
-    "extension-cli": "latest"
+    "chai": "^5.0.3",
+    "extension-cli": "latest",
+    "mocha": "^10.2.0"
   },
   "xtdocs": {
     "source": {

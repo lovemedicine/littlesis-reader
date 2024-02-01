@@ -1,11 +1,14 @@
 import { exportsForTesting } from "../src/gcp.js";
-import { latimesRawEntities, latimesPreparedEntities } from "./data/latimes.js";
+import {
+  latimesRawEntities,
+  latimesPreparedEntities,
+} from "../testData/latimes.js";
 const { isUsableEntity, prepareGcpEntities } = exportsForTesting;
 
 describe("prepareGcpEntities()", () => {
   it("filters, formats, and adds related entities", () => {
-    expect(prepareGcpEntities(latimesRawEntities)).to.equal(
-      latimesPreparedEntities[0]
+    expect(prepareGcpEntities(latimesRawEntities)).to.deep.equal(
+      latimesPreparedEntities
     );
   });
 });
