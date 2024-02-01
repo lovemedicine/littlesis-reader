@@ -7,7 +7,7 @@ const { isUsableEntity, prepareGcpEntities } = exportsForTesting;
 
 describe("prepareGcpEntities()", () => {
   it("filters, formats, and adds related entities", () => {
-    expect(prepareGcpEntities(latimesRawEntities)).to.deep.equal(
+    expect(prepareGcpEntities(latimesRawEntities)).toStrictEqual(
       latimesPreparedEntities
     );
   });
@@ -16,7 +16,7 @@ describe("prepareGcpEntities()", () => {
 describe("isUsableEntity", () => {
   it("returns false for person without metadata", () => {
     const entity = { name: "person", type: "PERSON", metadata: {} };
-    expect(isUsableEntity(entity)).to.be.false;
+    expect(isUsableEntity(entity)).toBe(false);
   });
 
   it("returns true for person with metadata", () => {
@@ -25,7 +25,7 @@ describe("isUsableEntity", () => {
       type: "PERSON",
       metadata: { mid: "someid" },
     };
-    expect(isUsableEntity(entity)).to.be.true;
+    expect(isUsableEntity(entity)).toBe(true);
   });
 
   it("returns true for org with metadata", () => {
@@ -34,12 +34,12 @@ describe("isUsableEntity", () => {
       type: "ORGANIZATION",
       metadata: { mid: "someid" },
     };
-    expect(isUsableEntity(entity)).to.be.true;
+    expect(isUsableEntity(entity)).toBe(true);
   });
 
   it("returns false for school location without metadata", () => {
     const entity = { name: "school", type: "LOCATION", metadata: {} };
-    expect(isUsableEntity(entity)).to.be.false;
+    expect(isUsableEntity(entity)).toBe(false);
   });
 
   it("returns false for non-school location with metadata", () => {
@@ -48,7 +48,7 @@ describe("isUsableEntity", () => {
       type: "LOCATION",
       metadata: { mid: "someid" },
     };
-    expect(isUsableEntity(entity)).to.be.false;
+    expect(isUsableEntity(entity)).toBe(false);
   });
 
   it("returns true for school location with metadata", () => {
@@ -57,6 +57,6 @@ describe("isUsableEntity", () => {
       type: "LOCATION",
       metadata: { mid: "someid" },
     };
-    expect(isUsableEntity(entity)).to.be.true;
+    expect(isUsableEntity(entity)).toBe(true);
   });
 });

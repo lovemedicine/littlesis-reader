@@ -8,7 +8,7 @@ function setDomHtml(html) {
 }
 
 describe("getPageContent()", () => {
-  context("page with 200 chars of paragraphs", () => {
+  describe("page with 200 chars of paragraphs", () => {
     const para1 =
       "Here is a fairly short paragraph. It only has three sentences. This is the last sentence.";
     const para2 = "Here is a very short paragraph.";
@@ -27,13 +27,13 @@ describe("getPageContent()", () => {
     const content = getPageContent();
 
     it("returns paragraphs", () => {
-      expect(content).to.include(para1);
-      expect(content).to.include(para2);
-      expect(content).to.include(para3);
+      expect(content).toContain(para1);
+      expect(content).toContain(para2);
+      expect(content).toContain(para3);
     });
   });
 
-  context("page without paragraphs", () => {
+  describe("page without paragraphs", () => {
     const visibleSentence =
       "Here is a sentence long enough to be considered part of the main content.";
     const hiddenSentence =
@@ -52,22 +52,22 @@ describe("getPageContent()", () => {
     const content = getPageContent();
 
     it("includes visible text", () => {
-      expect(content).to.include(visibleSentence);
+      expect(content).toContain(visibleSentence);
     });
 
     it("excludes hidden text", () => {
-      expect(content).not.to.include(hiddenSentence);
+      expect(content).not.toContain(hiddenSentence);
     });
 
     it("excludes short text", () => {
-      expect(content).not.to.include(shortText);
+      expect(content).not.toContain(shortText);
     });
 
     it("leaves document unchanged", () => {
       const before = document.innerHTML;
       getPageContent();
       const after = document.innerHTML;
-      expect(before).to.equal(after);
+      expect(before).toBe(after);
     });
   });
 });
