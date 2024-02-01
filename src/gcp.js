@@ -3,6 +3,7 @@ import { callBackendFunction } from "./api.js";
 // returns entities in the form of { name, type, related, metadata }
 export async function extractEntitiesWithGcp(text) {
   const gcpEntities = await getGcpNamedEntities(text);
+  console.log(gcpEntities);
   return prepareGcpEntities(gcpEntities);
 }
 
@@ -89,6 +90,6 @@ export let exportsForTesting;
 if (process.env.NODE_ENV === "test") {
   exportsForTesting = {
     isUsableEntity,
-    formatEntity,
+    prepareGcpEntities,
   };
 }

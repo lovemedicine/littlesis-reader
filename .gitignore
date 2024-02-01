@@ -4,3 +4,4 @@ src/config.js
 src/test.js
 src/keys
 .nyc_output
+.vscode

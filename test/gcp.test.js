@@ -1,5 +1,14 @@
 import { exportsForTesting } from "../src/gcp.js";
-const { isUsableEntity } = exportsForTesting;
+import { latimesRawEntities, latimesPreparedEntities } from "./data/latimes.js";
+const { isUsableEntity, prepareGcpEntities } = exportsForTesting;
+
+describe("prepareGcpEntities()", () => {
+  it("filters, formats, and adds related entities", () => {
+    expect(prepareGcpEntities(latimesRawEntities)).to.equal(
+      latimesPreparedEntities[0]
+    );
+  });
+});
 
 describe("isUsableEntity", () => {
   it("returns false for person without metadata", () => {
