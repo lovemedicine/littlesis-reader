@@ -18,7 +18,9 @@ async function matchEntitiesWithMetadata(entities) {
       const metadataValues = entities
         .map((entity) => entity.metadata[key])
         .filter(Boolean);
-      const map = await getLittlesisIdsFromGcpMetadata(key, metadataValues);
+      const map = metadataValues.length
+        ? await getLittlesisIdsFromGcpMetadata(key, metadataValues)
+        : {};
       return [key, map];
     })
   );
@@ -127,4 +129,12 @@ function convertSearchResultsToDisplayEntities(searchResults) {
       } = hit;
       return { id, type, name: result.entity.name, blurb };
     });
+}
+
+export let exportsForTesting;
+
+if (process.env.NODE_ENV === "test") {
+  exportsForTesting = {
+    matchEntitiesWithMetadata,
+  };
 }
